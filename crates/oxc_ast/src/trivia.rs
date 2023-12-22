@@ -20,7 +20,7 @@ pub struct TriviasMap {
 impl From<Trivias> for TriviasMap {
     fn from(trivias: Trivias) -> Self {
         Self { comments: trivias.iter().map(|t| (t.0, Comment::new(t.1, t.2))).collect() }
-    }
+   }
 }
 
 /// Single or multiline comment
