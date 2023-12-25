@@ -9,7 +9,7 @@ use oxc_span::Span;
 pub struct Trivias {
     pub comments: Vec<(u32, u32, CommentKind)>,
     pub whitespaces: Vec<Span>,
-} 
+}
 
 /// Trivias such as comments
 ///
@@ -24,10 +24,10 @@ pub struct TriviasMap {
 
 impl From<Trivias> for TriviasMap {
     fn from(trivias: Trivias) -> Self {
-        Self { 
+        Self {
             comments: trivias.comments.iter().map(|t| (t.0, Comment::new(t.1, t.2))).collect(),
-            whitespaces: trivias.whitespaces.iter().map(|s| (s.start, *s)).collect()
-         }
+            whitespaces: trivias.whitespaces.iter().map(|s| (s.start, *s)).collect(),
+        }
     }
 }
 
@@ -100,12 +100,12 @@ impl TriviasMap {
         self.comments().iter().map(|(start, comment)| (*comment, Span::new(*start, comment.end)))
     }
 
-    pub fn whitespaces(&self)  -> &BTreeMap<u32, Span>   {
+    pub fn whitespaces(&self) -> &BTreeMap<u32, Span> {
         &self.whitespaces
     }
 
     pub fn add_whitespace(&mut self, span: Span) {
         let whitespace = Span { start: span.start, end: span.end };
-        self.whitespaces.insert(whitespace.start,whitespace);
+        self.whitespaces.insert(whitespace.start, whitespace);
     }
 }

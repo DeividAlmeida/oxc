@@ -33,13 +33,13 @@ declare_oxc_lint!(
 );
 
 impl Rule for NoIrregularWhitespace {
-    // fn run_once(&self, ctx: &LintContext<'_>) {
-    //     let whitespaces = ctx.semantic().trivias().whitespaces();
-    //     for whitespace in whitespaces {
-    //         let span = whitespace.1.to_owned();
-    //         ctx.diagnostic(NoIrregularWhitespaceDiagnostic(span));
-    //     }
-    // }
+    fn run_once(&self, ctx: &LintContext<'_>) {
+        let whitespaces = ctx.semantic().trivias().whitespaces();
+        for whitespace in whitespaces {
+            let span = whitespace.1.to_owned() as Span;
+            ctx.diagnostic(NoIrregularWhitespaceDiagnostic(span));
+        }
+    }
 }
 
 #[test]
