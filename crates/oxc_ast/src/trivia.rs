@@ -5,7 +5,11 @@ use std::collections::BTreeMap;
 use oxc_span::Span;
 
 /// A vec of trivias from the lexer, tupled by (span.start, span.end).
-pub type Trivias = Vec<(u32, u32, CommentKind)>;
+#[derive(Debug, Default)]
+pub struct Trivias {
+    pub comments: Vec<(u32, u32, CommentKind)>,
+    pub whitespaces: Vec<Span>,
+} 
 
 /// Trivias such as comments
 ///
@@ -15,12 +19,16 @@ pub type Trivias = Vec<(u32, u32, CommentKind)>;
 pub struct TriviasMap {
     /// Keyed by span.start
     comments: BTreeMap<u32, Comment>,
+    whitespaces: BTreeMap<u32, Span>,
 }
 
 impl From<Trivias> for TriviasMap {
     fn from(trivias: Trivias) -> Self {
-        Self { comments: trivias.iter().map(|t| (t.0, Comment::new(t.1, t.2))).collect() }
-   }
+        Self { 
+            comments: trivias.comments.iter().map(|t| (t.0, Comment::new(t.1, t.2))).collect(),
+            whitespaces: trivias.whitespaces.iter().map(|s| (s.start, *s)).collect()
+         }
+    }
 }
 
 /// Single or multiline comment
@@ -90,5 +98,14 @@ impl TriviasMap {
 
     pub fn comments_spans(&self) -> impl Iterator<Item = (Comment, Span)> + '_ {
         self.comments().iter().map(|(start, comment)| (*comment, Span::new(*start, comment.end)))
+    }
+
+    pub fn whitespaces(&self)  -> &BTreeMap<u32, Span>   {
+        &self.whitespaces
+    }
+
+    pub fn add_whitespace(&mut self, span: Span) {
+        let whitespace = Span { start: span.start, end: span.end };
+        self.whitespaces.insert(whitespace.start,whitespace);
     }
 }
