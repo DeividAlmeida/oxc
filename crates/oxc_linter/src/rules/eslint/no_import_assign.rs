@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use oxc_ast:: AstKind;
+use oxc_ast::AstKind;
 use oxc_diagnostics::{
     miette::{self, Diagnostic},
     thiserror::Error,
@@ -49,20 +49,18 @@ impl Rule for NoImportAssign {
         let symbol_table = ctx.semantic().symbols();
         if symbol_table.get_flag(symbol_id).is_import_binding() {
             for reference in symbol_table.get_resolved_references(symbol_id) {
-                if reference.is_write() {
+                if reference.is_write()  || is_valid_assign(reference.node_id(), ctx.semantic().nodes()) {
                     ctx.diagnostic(NoImportAssignDiagnostic(reference.span()));
-                } else if is_valid_assign(reference.node_id(), ctx.semantic().nodes()) {
-                    ctx.diagnostic(NoImportAssignDiagnostic(reference.span()));
-                }
+                } 
             }
         }
     }
 }
 
 fn is_valid_assign(current_node_id: AstNodeId, nodes: &AstNodes) -> bool {
-    for (curr, parent) in nodes
-        .iter_parents(nodes.parent_id(current_node_id).unwrap_or(current_node_id))
-        .tuple_windows::<(&AstNode<'_>, &AstNode<'_>)>()
+    if let Some((curr, parent)) = nodes
+    .iter_parents(nodes.parent_id(current_node_id).unwrap_or(current_node_id))
+    .tuple_windows::<(&AstNode<'_>, &AstNode<'_>)>().next()
     {
         match (curr.kind(), parent.kind()) {
             (
@@ -78,8 +76,7 @@ fn is_valid_assign(current_node_id: AstNodeId, nodes: &AstNodes) -> bool {
             ) => {
                 return false;
             }
-            (_, AstKind::MemberExpression(expr)) | 
-            (AstKind::MemberExpression(expr), _) => {
+            (_, AstKind::MemberExpression(expr)) | (AstKind::MemberExpression(expr), _) => {
                 return expr.static_property_name() != Some("prop");
             }
             _ => {
