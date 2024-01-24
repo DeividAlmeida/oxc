@@ -1,12 +1,12 @@
 use itertools::Itertools;
-use oxc_ast::{ast::Expression, AstKind};
+use oxc_ast:: AstKind;
 use oxc_diagnostics::{
     miette::{self, Diagnostic},
     thiserror::Error,
 };
 use oxc_macros::declare_oxc_lint;
 use oxc_semantic::{AstNode, AstNodeId, AstNodes, SymbolId};
-use oxc_span::{GetSpan, Span};
+use oxc_span::Span;
 
 use crate::{context::LintContext, rule::Rule};
 
@@ -54,40 +54,36 @@ impl Rule for NoImportAssign {
                 } else if is_valid_assign(reference.node_id(), ctx.semantic().nodes()) {
                     ctx.diagnostic(NoImportAssignDiagnostic(reference.span()));
                 }
-                
             }
         }
     }
 }
 
-fn is_valid_assign(current_node_id: AstNodeId, nodes: &AstNodes ) -> bool {
+fn is_valid_assign(current_node_id: AstNodeId, nodes: &AstNodes) -> bool {
     for (curr, parent) in nodes
         .iter_parents(nodes.parent_id(current_node_id).unwrap_or(current_node_id))
         .tuple_windows::<(&AstNode<'_>, &AstNode<'_>)>()
     {
-        match(curr.kind(), parent.kind() )  {
+        match (curr.kind(), parent.kind()) {
             (
-                AstKind::MemberExpression(_), 
-                AstKind::SpreadElement(_) | 
-                AstKind::ObjectProperty(_) | 
-                AstKind::PropertyKey(_) | 
-                AstKind::AssignmentTargetWithDefault(_) |
-                AstKind::AssignmentTarget(_) |
-                AstKind::ForOfStatement(_) |
-                AstKind::ForInStatement(_) |
-                AstKind::MemberExpression(_)
+                AstKind::MemberExpression(_),
+                AstKind::SpreadElement(_)
+                | AstKind::ObjectProperty(_)
+                | AstKind::PropertyKey(_)
+                | AstKind::AssignmentTargetWithDefault(_)
+                | AstKind::AssignmentTarget(_)
+                | AstKind::ForOfStatement(_)
+                | AstKind::ForInStatement(_)
+                | AstKind::MemberExpression(_),
             ) => {
                 return false;
             }
-            (_ , AstKind::MemberExpression(expr)) => {
-                return expr.static_property_name() != Some("prop");
-            }
+            (_, AstKind::MemberExpression(expr)) | 
             (AstKind::MemberExpression(expr), _) => {
                 return expr.static_property_name() != Some("prop");
             }
             _ => {
-                dbg!(parent.kind());
-                return  false;
+                return false;
             }
         }
     }
