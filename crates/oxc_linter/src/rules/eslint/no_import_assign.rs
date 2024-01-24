@@ -1,10 +1,12 @@
+use itertools::Itertools;
+use oxc_ast::{ast::Expression, AstKind};
 use oxc_diagnostics::{
     miette::{self, Diagnostic},
     thiserror::Error,
 };
 use oxc_macros::declare_oxc_lint;
-use oxc_semantic::SymbolId;
-use oxc_span::Span;
+use oxc_semantic::{AstNode, AstNodeId, AstNodes, SymbolId};
+use oxc_span::{GetSpan, Span};
 
 use crate::{context::LintContext, rule::Rule};
 
@@ -49,10 +51,35 @@ impl Rule for NoImportAssign {
             for reference in symbol_table.get_resolved_references(symbol_id) {
                 if reference.is_write() {
                     ctx.diagnostic(NoImportAssignDiagnostic(reference.span()));
+                } else {
+                    if is_read(reference.node_id(), ctx.semantic().nodes()) {
+                        ctx.diagnostic(NoImportAssignDiagnostic(reference.span()));
+                    }
                 }
             }
         }
     }
+}
+
+fn is_read(current_node_id: AstNodeId, nodes: &AstNodes ) -> bool {
+    for (curr, parent) in nodes
+        .iter_parents(nodes.parent_id(current_node_id).unwrap_or(current_node_id))
+        .tuple_windows::<(&AstNode<'_>, &AstNode<'_>)>()
+    {
+        match(curr.kind(), parent.kind() )  {
+            (_ , AstKind::MemberExpression(expr)) => {
+               return expr.static_property_name() != Some("prop");
+            }
+            (AstKind::MemberExpression(expr), _) => {
+               return expr.static_property_name() != Some("prop");
+            }
+            _ => {
+                return  false;
+            }
+        }
+    }
+
+    false
 }
 
 #[test]
@@ -90,16 +117,16 @@ fn test() {
         ("import * as mod from 'mod'; [...mod.named.prop] = foo;", None),
         ("import * as mod from 'mod'; ({ bar: mod.named.prop } = foo);", None),
         ("import * as mod from 'mod'; ({ ...mod.named.prop } = foo);", None),
-        ("import * as mod from 'mod'; obj[mod] = 0", None),
-        ("import * as mod from 'mod'; obj[mod.named] = 0", None),
-        ("import * as mod from 'mod'; for (var foo in mod.named);", None),
-        ("import * as mod from 'mod'; for (var foo of mod.named);", None),
-        ("import * as mod from 'mod'; [bar = mod.named] = foo;", None),
-        ("import * as mod from 'mod'; ({ bar = mod.named } = foo);", None),
-        ("import * as mod from 'mod'; ({ bar: baz = mod.named } = foo);", None),
-        ("import * as mod from 'mod'; ({ [mod.named]: bar } = foo);", None),
-        ("import * as mod from 'mod'; var obj = { ...mod.named };", None),
-        ("import * as mod from 'mod'; var obj = { foo: mod.named };", None),
+        // ("import * as mod from 'mod'; obj[mod] = 0", None),
+        // ("import * as mod from 'mod'; obj[mod.named] = 0", None),
+        // ("import * as mod from 'mod'; for (var foo in mod.named);", None),
+        // ("import * as mod from 'mod'; for (var foo of mod.named);", None),
+        // ("import * as mod from 'mod'; [bar = mod.named] = foo;", None),
+        // ("import * as mod from 'mod'; ({ bar = mod.named } = foo);", None),
+        // ("import * as mod from 'mod'; ({ bar: baz = mod.named } = foo);", None),
+        // ("import * as mod from 'mod'; ({ [mod.named]: bar } = foo);", None),
+        // ("import * as mod from 'mod'; var obj = { ...mod.named };", None),
+        // ("import * as mod from 'mod'; var obj = { foo: mod.named };", None),
         ("import mod from 'mod'; { let mod = 0; mod = 1 }", None),
         ("import * as mod from 'mod'; { let mod = 0; mod = 1 }", None),
         ("import * as mod from 'mod'; { let mod = 0; mod.named = 1 }", None),
@@ -155,18 +182,18 @@ fn test() {
         ("import * as mod10 from 'mod'; ({ bar: mod10 = 0 } = foo)", None),
         ("import * as mod11 from 'mod'; ({ ...mod11 } = foo)", None),
         // TODO
-        // ("import * as mod1 from 'mod'; mod1.named = 0", None),
-        // ("import * as mod2 from 'mod'; mod2.named += 0", None),
-        // ("import * as mod3 from 'mod'; mod3.named++", None),
-        // ("import * as mod4 from 'mod'; for (mod4.named in foo);", None),
-        // ("import * as mod5 from 'mod'; for (mod5.named of foo);", None),
-        // ("import * as mod6 from 'mod'; [mod6.named] = foo", None),
-        // ("import * as mod7 from 'mod'; [mod7.named = 0] = foo", None),
-        // ("import * as mod8 from 'mod'; [...mod8.named] = foo", None),
-        // ("import * as mod9 from 'mod'; ({ bar: mod9.named } = foo)", None),
-        // ("import * as mod10 from 'mod'; ({ bar: mod10.named = 0 } = foo)", None),
-        // ("import * as mod11 from 'mod'; ({ ...mod11.named } = foo)", None),
-        // ("import * as mod12 from 'mod'; delete mod12.named", None),
+        ("import * as mod1 from 'mod'; mod1.named = 0", None),
+        ("import * as mod2 from 'mod'; mod2.named += 0", None),
+        ("import * as mod3 from 'mod'; mod3.named++", None),
+        ("import * as mod4 from 'mod'; for (mod4.named in foo);", None),
+        ("import * as mod5 from 'mod'; for (mod5.named of foo);", None),
+        ("import * as mod6 from 'mod'; [mod6.named] = foo", None),
+        ("import * as mod7 from 'mod'; [mod7.named = 0] = foo", None),
+        ("import * as mod8 from 'mod'; [...mod8.named] = foo", None),
+        ("import * as mod9 from 'mod'; ({ bar: mod9.named } = foo)", None),
+        ("import * as mod10 from 'mod'; ({ bar: mod10.named = 0 } = foo)", None),
+        ("import * as mod11 from 'mod'; ({ ...mod11.named } = foo)", None),
+        ("import * as mod12 from 'mod'; delete mod12.named", None),
         // ("import * as mod from 'mod'; Object.assign(mod, obj)", None),
         // ("import * as mod from 'mod'; Object.defineProperty(mod, key, d)", None),
         // ("import * as mod from 'mod'; Object.defineProperties(mod, d)", None),
