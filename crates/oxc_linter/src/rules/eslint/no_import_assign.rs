@@ -50,7 +50,7 @@ impl Rule for NoImportAssign {
         if symbol_table.get_flag(symbol_id).is_import_binding() {
             for reference in symbol_table.get_resolved_references(symbol_id) {
                 if reference.is_write()
-                    || is_valid_assign(reference.node_id(), ctx.semantic().nodes())
+                    || is_invalid_assign(reference.node_id(), ctx.semantic().nodes())
                 {
                     ctx.diagnostic(NoImportAssignDiagnostic(reference.span()));
                 }
@@ -59,7 +59,7 @@ impl Rule for NoImportAssign {
     }
 }
 
-fn is_valid_assign(current_node_id: AstNodeId, nodes: &AstNodes) -> bool {
+fn is_invalid_assign(current_node_id: AstNodeId, nodes: &AstNodes) -> bool {
     if let Some((curr, parent)) = nodes
         .iter_parents(nodes.parent_id(current_node_id).unwrap_or(current_node_id))
         .tuple_windows::<(&AstNode<'_>, &AstNode<'_>)>()
