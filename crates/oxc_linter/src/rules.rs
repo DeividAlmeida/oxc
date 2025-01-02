@@ -85,6 +85,7 @@ mod eslint {
     pub mod no_fallthrough;
     pub mod no_func_assign;
     pub mod no_global_assign;
+    pub mod no_implied_eval;
     pub mod no_import_assign;
     pub mod no_inner_declarations;
     pub mod no_invalid_regexp;
@@ -543,6 +544,7 @@ oxc_macros::declare_all_lint_rules! {
     eslint::max_lines,
     eslint::max_params,
     eslint::new_cap,
+    eslint::no_implied_eval,
     eslint::no_extra_label,
     eslint::no_multi_assign,
     eslint::no_nested_ternary,
